@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { startSession } from "../api/client";
+import AppHeader from "../components/AppHeader";
 
 function CheckIcon() {
   return (
@@ -24,12 +25,12 @@ function Panel({ title, children }) {
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="flex-1 bg-white rounded-3xl border border-border shadow-card flex flex-col overflow-hidden"
+      className="bg-white rounded-3xl border border-border shadow-card flex flex-col overflow-hidden min-h-[360px] sm:min-h-[400px] lg:min-h-[440px]"
     >
-      <div className="px-6 py-4 border-b border-border bg-surface/60">
+      <div className="px-5 sm:px-6 py-4 border-b border-border bg-surface/60 shrink-0">
         <p className="text-sm font-semibold text-ink">{title}</p>
       </div>
-      <div className="flex-1 p-6 flex flex-col">{children}</div>
+      <div className="flex-1 p-5 sm:p-6 flex flex-col min-h-0">{children}</div>
     </motion.div>
   );
 }
@@ -120,30 +121,24 @@ export default function Upload() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-surface via-white to-surface flex flex-col">
-      <header className="flex items-center px-6 md:px-10 py-5">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center text-white font-bold text-sm shadow-glow">
-            AI
-          </div>
-          <span className="font-semibold text-ink tracking-tight">Interview Coach</span>
-        </div>
-      </header>
+    <div className="h-dvh bg-gradient-to-b from-surface via-white to-surface flex flex-col overflow-hidden">
+      <AppHeader maxWidth="max-w-5xl" />
 
-      <main className="flex-1 px-6 md:px-10 pb-10 max-w-5xl mx-auto w-full flex flex-col">
-        <div className="flex flex-col md:flex-row gap-6 flex-1">
-          {/* resume panel */}
-          <Panel title="Upload your resume">
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setResumeDragOver(true);
-              }}
-              onDragLeave={() => setResumeDragOver(false)}
-              onDrop={handleResumeDrop}
-              className="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors"
-              style={{ borderColor: resumeDragOver ? "#2F6FEF" : "#E4ECFB" }}
-            >
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 md:px-10 py-6 flex flex-col">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+            {/* resume panel */}
+            <Panel title="Upload your resume">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setResumeDragOver(true);
+                }}
+                onDragLeave={() => setResumeDragOver(false)}
+                onDrop={handleResumeDrop}
+                className="flex-1 min-h-0 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors"
+                style={{ borderColor: resumeDragOver ? "#2F6FEF" : "#E4ECFB" }}
+              >
               <AnimatePresence mode="wait">
                 {resumeFile ? (
                   <motion.div
@@ -322,6 +317,7 @@ export default function Upload() {
             )}
             {isStarting ? "Starting…" : "Start interview"}
           </motion.button>
+        </div>
         </div>
       </main>
     </div>

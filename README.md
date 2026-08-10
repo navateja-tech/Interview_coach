@@ -49,6 +49,10 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+Note: the Upload page renders an in-browser preview of your resume PDF
+using `pdfjs-dist`. It's lazy-loaded (only downloaded once you actually
+select a resume file), so it doesn't add to the initial page load.
+
 ## Testing the full flow with a real Groq key
 
 Before clicking through the UI, you can verify the whole adaptive interview

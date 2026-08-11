@@ -60,6 +60,12 @@ class QAResult(BaseModel):
     title: str
     sentiment: Literal["Positive", "Neutral", "Needs work"]
     note: str
+    question_text: str
+    answer_text: str
+    model_answer: str
+    score: int = Field(ge=0, le=100, description="This question's overall score (0-100)")
+    strengths: list[str] = Field(default_factory=list, description="Derived from this question's dimension scores")
+    improvements: list[str] = Field(default_factory=list, description="Derived from this question's dimension scores")
 
 
 class ResultsResponse(BaseModel):

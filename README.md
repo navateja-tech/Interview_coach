@@ -85,14 +85,17 @@ actual browser UI.
    audio never leaves the browser, only the transcribed text is sent to the
    backend). "Score and improve the response" calls
    `POST /api/session/{id}/answer`, which scores the answer and returns
-   either the next question or marks the interview complete. A left sidebar
-   tracks the questions discussed so far. "End interview" returns to
-   Landing.
-
-There's no separate results/analytics page in the current UI — scoring
-feedback (including a model answer) shows inline after each response. The
-backend still exposes `GET /api/session/{id}/results` (aggregated scores +
-radar-chart-ready data) if a summary view gets added back later.
+   either the next question or marks the interview complete. A sidebar
+   tracks question-by-question progress. "End Interview" (or completing all
+   questions) goes to Results.
+4. **Results page** (`/results`) — calls `GET /api/session/{id}/results`
+   and shows an overall score gauge, per-dimension metric cards, a
+   question-by-question list with a tabbed detail panel (Your Answer /
+   Ideal Answer / AI Feedback) and per-question strengths/improvements
+   derived directly from that answer's own dimension scores — no invented
+   stats. "Download Report" uses the browser's print dialog; "Share Result"
+   uses the Web Share API where available, or copies a summary to the
+   clipboard.
 
 ## Troubleshooting
 
@@ -120,9 +123,8 @@ happening:
 - **Sessions are in-memory** -- they're lost on backend restart. Fine for a
   demo/single-run interview; swap for Redis or Postgres if this needs to
   survive restarts or scale across multiple backend instances.
-- **No dedicated results/summary page in the UI** -- feedback is shown
-  inline after each answer instead. The backend's `/results` endpoint still
-  computes an aggregated score if a summary screen gets added back.
+- **No accounts/history** -- since there's no login, the Results page only
+  shows the session you just completed; there's no "past interviews" list.
 - **Eye contact / voice clarity aren't measured.** Those need video/audio
   signal analysis, which isn't implemented. The scored dimensions are all
   text-derivable instead: Relevance, STAR Structure, Depth, Clarity,

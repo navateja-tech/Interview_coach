@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Upload from "./pages/Upload";
 import LiveInterview from "./pages/LiveInterview";
+import Results from "./pages/Results";
 import PageTransition from "./components/PageTransition";
 
 function AnimatedRoutes() {
@@ -13,6 +14,7 @@ function AnimatedRoutes() {
         <Route path="/" element={<PageTransition><Landing /></PageTransition>} />
         <Route path="/upload" element={<PageTransition><Upload /></PageTransition>} />
         <Route path="/interview" element={<PageTransition><LiveInterview /></PageTransition>} />
+        <Route path="/results" element={<PageTransition><Results /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   );

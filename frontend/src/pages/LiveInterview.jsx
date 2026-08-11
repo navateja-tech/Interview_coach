@@ -182,11 +182,39 @@ export default function LiveInterview() {
   // read the current question aloud, drive the waveform while it does
   useEffect(() => {
     if (!question || typeof window === "undefined" || !window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance(question.text);
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+
+    const speak = () => {
+      const utterance = new SpeechSynthesisUtterance(question.text);
+      utterance.rate = 0.88; // default (1.0) reads noticeably too fast for a question you need to actually follow
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      // Prefer a higher-quality English voice if the browser has one loaded
+      // (many browsers load voices asynchronously, hence the retry below).
+      const voices = window.speechSynthesis.getVoices();
+      const preferred =
+        voices.find((v) => /en-US|en-GB/.test(v.lang) && /Google|Natural|Premium/i.test(v.name)) ||
+        voices.find((v) => /en-US|en-GB/.test(v.lang)) ||
+        voices.find((v) => v.lang?.startsWith("en"));
+      if (preferred) utterance.voice = preferred;
+
+      utterance.onstart = () => setSpeaking(true);
+      utterance.onend = () => setSpeaking(false);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    };
+
+    if (window.speechSynthesis.getVoices().length === 0) {
+      // voice list not loaded yet -- wait for it, then speak
+      const handler = () => {
+        speak();
+        window.speechSynthesis.removeEventListener("voiceschanged", handler);
+      };
+      window.speechSynthesis.addEventListener("voiceschanged", handler);
+      return () => window.speechSynthesis.removeEventListener("voiceschanged", handler);
+    }
+
+    speak();
     return () => window.speechSynthesis.cancel();
   }, [question]);
 
@@ -231,7 +259,10 @@ export default function LiveInterview() {
       setAnswerText("");
 
       if (data.is_complete) {
-        setTimeout(() => navigate("/"), 1400);
+        setTimeout(
+          () => navigate("/results", { state: { sessionId: initial.sessionId, duration: elapsed } }),
+          1400
+        );
       } else {
         setQuestion(data.next_question);
         setQuestionNumber(data.question_number);
@@ -252,7 +283,11 @@ export default function LiveInterview() {
     <motion.button
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
-      onClick={() => navigate("/")}
+      onClick={() =>
+        history.length > 0
+          ? navigate("/results", { state: { sessionId: initial.sessionId, duration: elapsed } })
+          : navigate("/")
+      }
       className={`flex items-center gap-1.5 text-sm font-medium rounded-full border border-red-200 text-red-500 hover:bg-red-50 transition-colors shrink-0 ${className}`}
     >
       <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5">

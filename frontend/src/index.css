@@ -13,3 +13,17 @@ body {
   background: #F0F6FF;
   color: #0F1B2D;
 }
+
+@media print {
+  body {
+    background: white;
+  }
+  .shadow-card,
+  .shadow-glow {
+    box-shadow: none !important;
+  }
+  .bg-gradient-to-b,
+  .bg-gradient-to-br {
+    background: white !important;
+  }
+}

@@ -26,8 +26,25 @@ class Evaluation(BaseModel):
     clarity: int = Field(ge=0, le=100, description="Clarity and conciseness of communication")
     grammar: int = Field(ge=0, le=100, description="Grammatical correctness")
     overall: int = Field(ge=0, le=100, description="Overall score for this answer")
-    feedback: str = Field(description="1-2 sentences of constructive feedback")
-    model_answer: str = Field(description="A brief improved example answer")
+    feedback: str = Field(
+        description="2-4 sentences of feedback that reference specific things the candidate actually "
+        "said (paraphrase or quote a specific claim), not generic advice"
+    )
+    specific_strengths: list[str] = Field(
+        default_factory=list,
+        description="1-3 bullets naming a concrete thing this answer did well, each referencing a "
+        "specific detail, example, or phrase from the candidate's actual answer",
+    )
+    specific_improvements: list[str] = Field(
+        default_factory=list,
+        description="1-3 bullets naming a concrete, specific gap in this answer -- e.g. a claim that "
+        "needed a number/example, a relevant resume project or JD requirement that went unmentioned, "
+        "or a specific missing step -- never generic advice like 'be more detailed'",
+    )
+    model_answer: str = Field(
+        description="A brief improved example answer, grounded in the candidate's actual resume/JD "
+        "context (use their real project/tech names where relevant, don't invent unrelated experience)"
+    )
 
 
 class StartSessionResponse(BaseModel):

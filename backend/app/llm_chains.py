@@ -76,7 +76,11 @@ def _invoke(chain, payload, retries=2):
 # ---------------------------------------------------------------------------
 
 FIRST_QUESTION_PROMPT = ChatPromptTemplate.from_template(
-    """You are an expert interviewer conducting a live mock interview.
+    """You are an expert technical interviewer conducting a live mock interview.
+Your defining trait as an interviewer: you NEVER ask generic questions.
+Every question you ask names a specific project, technology, number, or
+responsibility pulled directly from the materials below -- never a
+question that could just as easily be asked of any candidate.
 
 RESUME:
 {resume_text}
@@ -84,11 +88,18 @@ RESUME:
 JOB DESCRIPTION:
 {jd_text}
 
-Ask ONE opening interview question — usually a warm, background-style
-question (e.g. about their most relevant project or experience) that draws
-on a specific detail from the resume and connects to the job description.
-Note the specific resume/JD keyword or project this question is based on
-in the "based_on" field.
+Write ONE opening question. Requirements:
+- Name a SPECIFIC project, role, technology, or achievement from the
+  resume by name (e.g. "your Interview Coach project" or "the FastAPI
+  migration at Northwind", not "your recent project").
+- Connect it to something concrete in the job description if there's a
+  natural link (a required skill, a responsibility, a tech stack item) --
+  don't force a connection that isn't there.
+- Avoid warm-up filler like "Tell me about yourself" or "Walk me through
+  your resume" -- go straight to something specific and substantive.
+- In "based_on", name the exact resume line or JD requirement the
+  question is grounded in (e.g. "Resume: 'FastAPI service handling 40k+
+  requests/day'" or "JD: '2+ years backend development'").
 """
 )
 
@@ -103,7 +114,10 @@ def generate_first_question(resume_text: str, jd_text: str) -> Question:
 # ---------------------------------------------------------------------------
 
 NEXT_QUESTION_PROMPT = ChatPromptTemplate.from_template(
-    """You are an expert interviewer conducting a live, adaptive mock interview.
+    """You are an expert technical interviewer conducting a live, adaptive mock
+interview. Your defining trait: every question is grounded in a specific
+detail from the resume, the JD, or something the candidate just said --
+never generic.
 
 RESUME:
 {resume_text}
@@ -115,15 +129,20 @@ INTERVIEW SO FAR (question -> candidate's answer):
 {history}
 
 Decide what to ask next:
-- If the candidate's last answer was shallow, vague, or left something
-  interesting unexplored, ask a natural FOLLOW-UP question that digs
-  deeper into that same answer. Set action to "follow_up".
-- Otherwise, move to a NEW topic (a different category: Behavioral,
-  Technical, Project, or JD-gap) that hasn't been well covered yet. Set
-  action to "new_topic".
+- If the candidate's last answer mentioned something specific but left it
+  under-explained (a vague claim, an unquantified result, a tool/decision
+  they didn't justify, a tradeoff they skipped), ask a FOLLOW-UP that
+  names exactly what to dig into (e.g. "You mentioned cutting latency --
+  what was it before and after, and what specifically caused the
+  improvement?"). Set action to "follow_up".
+- Otherwise, move to a NEW topic grounded in a resume detail or JD
+  requirement not yet covered (a different category: Behavioral,
+  Technical, Project, or JD-gap). Set action to "new_topic".
 
-Ask exactly one question, tailored to the resume and JD, and note which
-resume/JD keyword or project it is based on in "based_on".
+Never ask a question generic enough to apply to any candidate. Always
+name the specific thing (project, claim, technology, requirement) the
+question is about. In "based_on", cite exactly what it's grounded in --
+either a resume/JD detail or "candidate's answer to Q<n>: <short quote>".
 """
 )
 
@@ -143,6 +162,16 @@ def generate_next_question(resume_text: str, jd_text: str, history: list[dict]) 
 
 EVALUATION_PROMPT = ChatPromptTemplate.from_template(
     """You are an expert interview coach scoring one answer from a mock interview.
+Your defining trait, and the reason candidates choose this platform over
+others: you NEVER give generic feedback like "be more specific" or "good
+job" -- every piece of feedback names the exact claim, phrase, or gap in
+THIS answer, and ties back to the candidate's own resume/JD where useful.
+
+RESUME:
+{resume_text}
+
+JOB DESCRIPTION:
+{jd_text}
 
 QUESTION ({category}): {question_text}
 
@@ -152,23 +181,50 @@ CANDIDATE'S ANSWER:
 Score the answer from 0-100 on each dimension:
 - relevance: how directly it addresses the question
 - structure: how well it follows the STAR method (Situation, Task, Action,
-  Result) — for non-behavioral questions, score how logically organized
+  Result) -- for non-behavioral questions, score how logically organized
   the explanation is
 - depth: specificity and depth of detail (concrete numbers, decisions,
   tradeoffs) vs. vague generalities
 - clarity: how clear and concise the communication is
 - grammar: grammatical correctness
 
-Then give an "overall" score (0-100), 1-2 sentences of constructive
-feedback, and a brief improved example answer ("model_answer") the
-candidate could learn from.
+Then write:
+- "overall": 0-100 overall score
+- "feedback": 2-4 sentences that reference what the candidate ACTUALLY
+  said -- paraphrase or quote a specific claim they made, and name
+  precisely what was strong or missing about it. Never write feedback
+  generic enough to apply to a different answer.
+- "specific_strengths": 1-3 bullets, each naming a concrete detail, number,
+  or decision the candidate specifically included and why it worked.
+  Skip this if the answer genuinely had nothing specific worth praising --
+  don't invent a strength that isn't there.
+- "specific_improvements": 1-3 bullets, each naming ONE concrete, specific
+  gap -- e.g. a claim that needed a number ("you said 'improved
+  performance' -- by how much?"), a relevant resume project or JD
+  requirement that would have strengthened this answer but went
+  unmentioned, or a specific missing step in the explanation. Never write
+  generic advice like "add more detail" or "be more confident" without
+  saying exactly what detail or where.
+- "model_answer": a brief improved example answer, grounded in the
+  candidate's OWN resume/JD context (reference their real projects/tech
+  where it fits naturally) -- not a generic textbook answer, and don't
+  invent experience they don't have.
 """
 )
 
 
-def evaluate_answer(question: Question, answer: str) -> Evaluation:
+def evaluate_answer(question: Question, answer: str, resume_text: str, jd_text: str) -> Evaluation:
     chain = EVALUATION_PROMPT | get_llm().with_structured_output(Evaluation)
-    return _invoke(chain, {"category": question.category, "question_text": question.text, "answer": answer})
+    return _invoke(
+        chain,
+        {
+            "resume_text": resume_text,
+            "jd_text": jd_text,
+            "category": question.category,
+            "question_text": question.text,
+            "answer": answer,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -177,17 +233,26 @@ def evaluate_answer(question: Question, answer: str) -> Evaluation:
 
 SUMMARY_PROMPT = ChatPromptTemplate.from_template(
     """You are an expert interview coach writing a short wrap-up summary for a
-candidate after a full mock interview.
+candidate after a full mock interview. As with all feedback on this
+platform, every bullet must name a specific question or detail -- never
+generic advice that could apply to any candidate's interview.
 
 Below are the questions, answers, and per-answer feedback from the session:
 {history}
 
 Write:
-- "strengths": 2-3 short bullet points on what the candidate did well,
-  across the whole interview
-- "improvements": 2-3 short bullet points on what to work on next time
+- "strengths": 2-3 bullets on what the candidate did well ACROSS MULTIPLE
+  answers -- name the pattern and cite which question(s) showed it
+  (e.g. "Consistently quantified impact, like the 40k requests/day figure
+  in Q1 and the 85% coverage number in Q3").
+- "improvements": 2-3 bullets on what to work on next time -- name the
+  specific recurring gap and cite where it showed up (e.g. "Skipped
+  explaining tradeoffs in Q2 and Q4 -- state what alternative you
+  considered and why you rejected it").
 
-Keep each bullet under 15 words.
+Keep each bullet under 25 words. If you can't find a genuine cross-answer
+pattern, it's fine to reference just the single clearest example instead
+of forcing a generalization.
 """
 )
 

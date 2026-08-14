@@ -56,7 +56,7 @@ async def submit_answer(session_id: str, payload: AnswerRequest):
         raise HTTPException(status_code=400, detail="Answer cannot be empty")
 
     current_question = session["current_question"]
-    evaluation = evaluate_answer(current_question, payload.answer)
+    evaluation = evaluate_answer(current_question, payload.answer, session["resume_text"], session["jd_text"])
     session["history"].append({"question": current_question, "answer": payload.answer, "evaluation": evaluation})
 
     question_number = len(session["history"])

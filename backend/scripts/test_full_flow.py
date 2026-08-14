@@ -139,6 +139,10 @@ def main():
         print(f"  scores: relevance={ev['relevance']} structure={ev['structure']} depth={ev['depth']} "
               f"clarity={ev['clarity']} grammar={ev['grammar']} overall={ev['overall']}")
         print(f"  feedback: {ev['feedback']}")
+        for s in ev.get("specific_strengths", []):
+            print(f"  [+] {s}")
+        for s in ev.get("specific_improvements", []):
+            print(f"  [-] {s}")
 
         if data["is_complete"]:
             print("\nInterview complete.")

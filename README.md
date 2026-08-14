@@ -97,6 +97,50 @@ actual browser UI.
    uses the Web Share API where available, or copies a summary to the
    clipboard.
 
+## Deployment
+
+Two pieces to deploy: the backend (FastAPI) and the frontend (static
+Vite build). Recommended: **Render** for the backend, **Vercel** for the
+frontend -- both have free tiers and deploy straight from GitHub.
+
+### Backend on Render
+
+`render.yaml` at the repo root already defines this as a Blueprint --
+on render.com, "New Blueprint" and point it at this repo, or manually:
+
+- New Web Service → Root Directory: `backend`
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Env vars: `GROQ_API_KEY` (your key), `FRONTEND_ORIGIN` (fill in once
+  you have the Vercel URL from the next step)
+
+You'll get a URL like `https://interview-coach-api.onrender.com`.
+
+### Frontend on Vercel
+
+`frontend/vercel.json` adds the SPA rewrite needed for client-side
+routes (`/upload`, `/interview`, `/results`) to work on direct load or
+refresh -- without it, refreshing on any page but `/` 404s.
+
+- New Project → import this repo → Root Directory: `frontend`
+  (Vercel auto-detects Vite, no build config needed)
+- Env var: `VITE_API_BASE_URL` = your Render backend URL from above
+
+You'll get a URL like `https://interview-coach.vercel.app`.
+
+### Wire them together
+
+Go back to Render's env vars, set `FRONTEND_ORIGIN` to the actual
+Vercel URL, redeploy the backend so CORS accepts requests from it.
+
+### Known deployment limitation
+
+Render's free tier spins the backend down after ~15 min idle (first
+request after that takes ~50s to wake back up), and since sessions live
+in memory, a restart or spin-down wipes any interview in progress. Fine
+for demo/portfolio use; the fix for anything more durable is the
+Redis/Postgres persistence upgrade mentioned below.
+
 ## Troubleshooting
 
 **"Failed to fetch" in the browser / `httpx.RemoteProtocolError: Server

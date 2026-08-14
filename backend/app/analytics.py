@@ -33,9 +33,12 @@ _DIMENSION_LABELS = {
 }
 
 
-def _per_question_strengths_and_improvements(evaluation) -> tuple[list[str], list[str]]:
-    """Derive honest per-question strengths/improvements straight from that
-    answer's own dimension scores -- no extra LLM call, no invented claims.
+def _fallback_strengths_and_improvements(evaluation) -> tuple[list[str], list[str]]:
+    """Fallback only: if the model didn't return specific_strengths/
+    specific_improvements for some reason, derive something from the raw
+    dimension scores rather than showing an empty panel. The LLM's own
+    grounded, answer-specific bullets (evaluation.specific_strengths/
+    specific_improvements) are always preferred over this.
     """
     dims = {
         "relevance": evaluation.relevance,
@@ -47,8 +50,6 @@ def _per_question_strengths_and_improvements(evaluation) -> tuple[list[str], lis
     strengths = [f"Strong {_DIMENSION_LABELS[k]}" for k, v in dims.items() if v >= 80]
     improvements = [f"Work on {_DIMENSION_LABELS[k]}" for k, v in dims.items() if v < 60]
 
-    # Always surface at least one of each, using the relative best/worst
-    # dimension for this answer, so the panel is never empty.
     if not strengths:
         best_key = max(dims, key=dims.get)
         strengths = [f"Relatively strongest on {_DIMENSION_LABELS[best_key]}"]
@@ -57,6 +58,16 @@ def _per_question_strengths_and_improvements(evaluation) -> tuple[list[str], lis
         improvements = [f"Most room to grow: {_DIMENSION_LABELS[worst_key]}"]
 
     return strengths[:4], improvements[:4]
+
+
+def _strengths_and_improvements_for(evaluation) -> tuple[list[str], list[str]]:
+    strengths = evaluation.specific_strengths or None
+    improvements = evaluation.specific_improvements or None
+    if strengths and improvements:
+        return strengths[:4], improvements[:4]
+
+    fallback_strengths, fallback_improvements = _fallback_strengths_and_improvements(evaluation)
+    return strengths[:4] if strengths else fallback_strengths, improvements[:4] if improvements else fallback_improvements
 
 
 def compute_results(history: list[dict]) -> ResultsResponse:
@@ -92,7 +103,7 @@ def compute_results(history: list[dict]) -> ResultsResponse:
 
     questions = []
     for i, h in enumerate(history):
-        q_strengths, q_improvements = _per_question_strengths_and_improvements(h["evaluation"])
+        q_strengths, q_improvements = _strengths_and_improvements_for(h["evaluation"])
         questions.append(
             QAResult(
                 n=i + 1,
